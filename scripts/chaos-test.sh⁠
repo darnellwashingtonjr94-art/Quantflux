@@ -1,0 +1,15 @@
+#!/bin/bash
+# scripts/chaos-test.sh
+
+set -e
+INTERFACE=${1:-"eth0"}
+LATENCY=${2:-"200ms"}
+LOSS=${3:-"5%"}
+
+echo "⚠️ Injecting network chaos into $INTERFACE (Latency: $LATENCY, Loss: $LOSS)..."
+
+# Apply traffic control rules to simulate degraded network performance
+sudo tc qdisc add dev "$INTERFACE" root netem delay "$LATENCY" loss "$LOSS"
+
+echo "Chaos injected. Run your execution tests now."
+echo "To reset, run: sudo tc qdisc del dev $INTERFACE root"
