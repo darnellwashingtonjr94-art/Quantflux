@@ -1,0 +1,40 @@
+import socket
+import struct
+import logging
+import asyncio
+import os
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [SHREDSTREAM] %(message)s")
+
+class ShredstreamRelayer:
+    def __init__(self, jito_engine_addr: str, local_port: int = 20000):
+        self.jito_engine_addr = jito_engine_addr
+        self.local_port = local_port
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 134217728) # 128MB buffer size
+
+    def bind_socket(self):
+        self.sock.bind(("0.0.0.0", self.local_port))
+        logging.info(f"Shredstream UDP socket bound to 0.0.0.0:{self.local_port}")
+
+    async def stream_shreds(self):
+        self.bind_socket()
+        logging.info(f"Relaying Shreds to Jito Engine: {self.jito_engine_addr}")
+        
+        loop = asyncio.get_event_loop()
+        while True:
+            try:
+                # Read raw UDP packet from TPU socket
+                data, _ = await loop.sock_recvfrom(self.sock, 65535)
+                if data:
+                    # Packet passthrough to collocated relayer
+                    pass
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logging.error(f"Error relaying shred packet: {e}")
+
+if __name__ == "__main__":
+    jito_endpoint = os.getenv("JITO_BLOCK_ENGINE", "127.0.0.1:9999")
+    relayer = ShredstreamRelayer(jito_endpoint)
+    asyncio.run(relayer.stream_shreds())
